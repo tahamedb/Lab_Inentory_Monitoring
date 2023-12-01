@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Transaction extends Model
 {
-    protected $fillable = ['product_id', 'type', 'quantity', 'remarks'];
+    protected $fillable = ['product_id','user_id', 'user_name', 'type', 'quantity', 'remarks'];
 
     public function product()
     {

@@ -9,7 +9,7 @@
     <a href="{{ route('products.create') }}">Add New Product</a>
     <ul>
         @foreach ($products as $product)
-            <li>{{ $product->name }} - {{ $product->description }}</li>
+            <li>{{ $product->name }} - {{ $product->description }} - {{$product->current_stock}}</li>
         @endforeach
     </ul>
 </body>

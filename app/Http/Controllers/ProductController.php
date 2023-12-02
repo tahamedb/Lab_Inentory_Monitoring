@@ -9,10 +9,17 @@ class ProductController extends Controller
 {
     public function index()
     {
-        $products = Product::all(); // Fetch all products from the database
-        return view('products.index', compact('products')); // Return a view and pass the products
+        {
+            $products = Product::with(['transactions'])->get()->map(function ($product) {
+                $entries = $product->transactions->where('type', 'entry')->sum('quantity');
+                $exits = $product->transactions->where('type', 'exit')->sum('quantity');
+                $product->current_stock = $entries - $exits; // Calculate current stock
+                return $product;
+            });
+    
+            return view('products.index', compact('products'));
+        }
     }
-
     public function create()
     {
         return view('products.create'); // Return a view for creating a new product

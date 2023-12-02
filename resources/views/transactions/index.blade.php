@@ -17,7 +17,7 @@
     {{-- Transaction List --}}
     <ul>
         @foreach ($transactions as $transaction)
-            <li>{{ $transaction->product->name }} - {{ $transaction->user->name }} - {{ $transaction->type }}</li>
+            <li>{{ $transaction->product->name }} - {{ $transaction->product->quantity }} - {{ $transaction->user->name }} - {{ $transaction->type }} - {{ $transaction->created_at }}</li>
         @endforeach
     </ul>
 

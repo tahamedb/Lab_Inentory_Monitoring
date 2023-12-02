@@ -28,7 +28,7 @@ class TransactionController extends Controller
             });
         }
 
-        $transactions = $query->get();
+        $transactions = $query->orderBy('created_at', 'desc')->get();
         $products = Product::all(); // Assuming you have a Product model
 
         return view('transactions.index', compact('transactions', 'products'));

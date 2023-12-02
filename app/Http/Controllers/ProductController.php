@@ -31,7 +31,7 @@ class ProductController extends Controller
         $validatedData = $request->validate([
             'name' => 'required|max:255',
             'description' => 'nullable',
-            'safety_stock_level' => 'required|integer',
+            'safety_stock_level' => 'nullable|integer',
         ]);
 
         Product::create($validatedData);

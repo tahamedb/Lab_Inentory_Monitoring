@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('description')->nullable();
-            $table->integer('safety_stock_level');
+            $table->integer('safety_stock_level')->nullable();
             $table->timestamps();
         });
     }

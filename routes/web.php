@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\HomeController;
+use Illuminate\Support\Facades\Redirect;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
@@ -36,8 +37,20 @@ Route::middleware(['auth'])->group(function () {
 
     // For handling the form submission to create a new transaction (POST request)
     Route::post('/transactions', [TransactionController::class, 'store'])->name('transactions.store');
+    Route::get('/transactions/{transaction}/edit', [TransactionController::class, 'edit'])->name('transactions.edit');
+    Route::put('/transactions/{transaction}', [TransactionController::class, 'update'])->name('transactions.update');
+
 });
 
 // Logout Route
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
      ->name('logout');
+     
+     //i added this bcz logout didnt work b4
+     Route::get('logout', function ()
+     {
+         auth()->logout();
+         Session()->flush();
+     
+         return Redirect::to('/');
+     })->name('logout');

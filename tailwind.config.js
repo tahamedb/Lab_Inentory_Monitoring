@@ -11,11 +11,17 @@ export default {
 
     theme: {
         extend: {
+
+            
             fontFamily: {
                 sans: ['Figtree', ...defaultTheme.fontFamily.sans],
             },
+            colors: {
+                breezeblue: '#111827', // Example hex code
+              }
         },
     },
 
     plugins: [forms],
+
 };

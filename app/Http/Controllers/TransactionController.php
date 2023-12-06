@@ -68,4 +68,52 @@ class TransactionController extends Controller
         // Redirect to the transactions list with a success message
         return redirect()->route('transactions.index')->with('success', 'Transaction successfully added.');
     }
+
+    public function edit(Transaction $transaction)
+    { $products = Product::all();
+        return view('transactions.edit', compact('transaction', 'products'));
+    }
+    public function update(Request $request, $id)
+    {
+        $user = Auth::user();
+    
+        // Find the existing transaction by ID
+        $transaction = Transaction::find($id);
+    
+        // Check if the transaction exists
+        if (!$transaction) {
+            return redirect()->route('transactions.index')->withErrors(['transaction' => 'The selected transaction does not exist.']);
+        }
+    
+        // Assume the field for product name in the form is 'product_name'
+        $productName = $request->input('product_name');
+    
+        // Find the product by name
+        $product = Product::where('name', $productName)->first();
+    
+        // Check if product exists
+        if (!$product) {
+            return back()->withErrors(['product_name' => 'The selected product does not exist.'])->withInput();
+        }
+    
+        // Validate other request data
+        $validatedData = $request->validate([
+            'quantity' => 'required|integer|min:1',
+            'type' => 'required|in:entry,exit',
+            'remarks' => 'nullable|string'
+        ]);
+    
+        // Update transaction properties
+        $transaction->product_id = $product->id;
+        $transaction->quantity = $validatedData['quantity'];
+        $transaction->type = $validatedData['type'];
+        $transaction->remarks = $validatedData['remarks'];
+    
+        // Save the updated transaction
+        $transaction->save();
+    
+        // Redirect to the transactions list with a success message
+        return redirect()->route('transactions.index')->with('success', 'Transaction successfully updated.');
+    }
+
 }

@@ -10,7 +10,7 @@ class ProductController extends Controller
     public function index()
     {
         {
-            $products = Product::with(['transactions'])->get()->map(function ($product) {
+            $products = Product::with(['transactions'])->orderBy('name') ->get()->map(function ($product) {
                 $entries = $product->transactions->where('type', 'entry')->sum('quantity');
                 $exits = $product->transactions->where('type', 'exit')->sum('quantity');
                 $product->current_stock = $entries - $exits; // Calculate current stock

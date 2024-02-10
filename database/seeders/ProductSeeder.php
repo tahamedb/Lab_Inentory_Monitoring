@@ -14,16 +14,20 @@ class ProductSeeder extends Seeder
      */
     public function run()
     {
-        $csv = Reader::createFromPath('/Users/abc/Downloads/STOCK 2023 - Copie - réf (1).csv', 'r');
-        $csv->setHeaderOffset(0); // If your CSV has headers
-            $i=0;
-        foreach ($csv as $record) {
-            $i=$i+1;
-            if($i==30) break;
-            Product::create([
-                'name' => $record['Produit '],
-                'safety_stock_level' => $record['safety_stock']
-            ]);
+        $products = Product::all();
+        $currentYear = date('Y');
+
+        foreach ($products as $product) {
+            // Generate a random price between 30 and 400
+            $product->price = rand(30, 400);
+
+            // Generate a random expiry date within the current year
+            $month = rand(1, 12);
+            $day = rand(1, 28); // Keeping it 28 to avoid invalid dates
+            $expiryDate = $currentYear . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-' . str_pad($day, 2, '0', STR_PAD_LEFT);
+            $product->expiry_date = $expiryDate;
+
+            $product->save();
         }
     }
 }

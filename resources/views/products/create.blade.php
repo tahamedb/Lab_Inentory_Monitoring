@@ -35,6 +35,11 @@
             <input type="number" name="safety_stock_level" id="safety_stock_level" class="px-4 py-2 rounded-lg border w-full" required>
         </div>
 
+
+        <div class="mb-4">
+            <label for="safety_stock_level" class="block text-gray-600">Price:</label>
+            <input type="number" name="price" id="safety_stock_level" class="px-4 py-2 rounded-lg border w-full" required>
+        </div>
         <button type="submit" class="px-4 py-2 bg-green-500 text-white rounded-lg">Add Product</button>
     </form>
 </body>

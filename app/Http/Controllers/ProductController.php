@@ -11,7 +11,7 @@ class ProductController extends Controller
 {
     public function index()
     {
-        $perPage = 15; // Define items per page
+        $perPage = 15; // Define items per page this is a new branch
     
         // Fetch and paginate data
         $products = Product::with(['transactions'])->latest()->get();

@@ -4,11 +4,10 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Redirect;
 use App\Http\Controllers\ProductController;
-use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\MailController;
-
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\TransactionController;
 
 // Breeze Authentication Routes
 require __DIR__.'/auth.php';

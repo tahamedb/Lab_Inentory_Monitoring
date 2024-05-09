@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Product;
+use App\Models\ProductEntry;
 use App\Models\ExpiryAlert;
 use App\Mail\ExpiryAlertMail;
 use Illuminate\Console\Command;
@@ -23,59 +23,51 @@ class CheckProductExpiry extends Command
      *
      * @var string
      */
-    protected $description = 'Command description';
+    protected $description = 'Checks all product entries for upcoming expiry and sends alerts.';
 
     /**
      * Execute the console command.
      */
     public function handle()
-{
-    $dateInOneWeek = now()->addWeek();
-    $alerts = ExpiryAlert::all();
+    {
 
-    foreach ($alerts as $alert) {
-        $product = Product::find($alert->product_id);
+        ExpiryAlert::whereHas('productEntry', function ($query) {
+            $query->where('quantity', '=', 0);
+        })->delete();
 
-        // Check if product still exists and handle accordingly
-        if ($product) {
-            // Delete alert if product is no longer expiring within a week
-            if ($product->expiry_date > $dateInOneWeek) {
-                $alert->delete();
-            } else {
-                // Check if an alert has already been sent
-                if (!$alert->notified) {
-                    // Send email notification
-                    $mailController = new MailController();
-                    $mailController->send_expiry_date_mail($product);
-                    
-                    // Mark alert as notified
-                    $alert->notified = true;
-                    $alert->save();
-                }
+        $this->info('Irrelevant expiry alerts cleaned up.');
+        $dateInOneWeek = now()->addWeek();
+
+        // Fetch product entries that are expiring within one week and have quantity remaining.
+        $expiringEntries = ProductEntry::where('expiry_date', '<=', $dateInOneWeek)
+            ->where('quantity', '>', 0)  // Check that the entry still has some quantity left
+            ->with('product') // Eager load the product
+            ->get();
+
+        foreach ($expiringEntries as $entry) {
+            if (!$entry->product) {
+                continue; // Skip if no product is associated (optional safeguard)
             }
-        } else {
-            // Optionally handle the case where the product no longer exists
+
+            // Check and create alert if not already notified.
+            $alert = ExpiryAlert::firstOrCreate(
+                ['product_entry_id' => $entry->id],
+                ['notified' => false]
+            );
+
+            if (!$alert->notified) {
+                // Assuming that MailController is properly set up to handle sending of expiry emails.
+                $mailController = new MailController();
+                $mailController->send_expiry_date_mail($entry->product, $entry->expiry_date);
+
+                // Mark alert as notified
+                $alert->notified = true;
+                $alert->save();
+
+                $this->info('Expiry alert sent for product entry ID: ' . $entry->id);
+            }
         }
+
+        $this->info('Expiry checks completed.');
     }
-
-    // Additionally, check for and handle any new products that are expiring within a week
-    $newExpiringProducts = Product::where('expiry_date', '<=', $dateInOneWeek)
-                                  ->whereDoesntHave('expiryAlerts')
-                                  ->get();
-
-    foreach ($newExpiringProducts as $product) {
-        // Send email notification
-        $mailController = new MailController();
-        $mailController->send_expiry_date_mail($product);
-
-        // Create a new alert
-        ExpiryAlert::create([
-            'product_id' => $product->id,
-            'expiry_date' => $product->expiry_date,
-            'notified' => true
-        ]);
-    }
-}
-
-
 }

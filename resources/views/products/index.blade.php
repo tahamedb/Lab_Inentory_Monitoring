@@ -42,7 +42,7 @@
                                 class="w-full px-4 py-2 border rounded-lg focus:ring focus:border-blue-300 text-black" />
                         </div>
                     </div>
-                    
+
 
                     <button type="submit" class="btn btn-primary me-2">Submit</button>
                 </form>
@@ -78,11 +78,11 @@
                                                 rowspan="1" colspan="1"
                                                 aria-label="Office: activate to sort column ascending"
                                                 style="width: 131.375px;">Current Stock</th>
-                                                <th class="sorting" tabindex="0" aria-controls="dataTableExample"
+                                            <th class="sorting" tabindex="0" aria-controls="dataTableExample"
                                                 rowspan="1" colspan="1"
                                                 aria-label="Office: activate to sort column ascending"
                                                 style="width: 131.375px;">Price</th>
-                                                <th class="sorting" tabindex="0" aria-controls="dataTableExample"
+                                            <th class="sorting" tabindex="0" aria-controls="dataTableExample"
                                                 rowspan="1" colspan="1"
                                                 aria-label="Office: activate to sort column ascending"
                                                 style="width: 131.375px;">Expiry date</th>
@@ -104,8 +104,16 @@
                                                 <td class="px-4 py-2">{{ $product->description }}</td>
                                                 <td class="px-4 py-2">{{ $product->current_stock }}</td>
                                                 <td class="px-4 py-2">{{ $product->price }}</td>
-                                                <td class="px-4 py-2">{{ $product->expiry_date }}</td>
-
+                                                <td class="px-4 py-2">
+                                                    @php
+                                                        $earliestExpiry = $product
+                                                            ->productEntries()
+                                                            ->where('quantity', '>', 0)
+                                                            ->where('expiry_date', '>', now())
+                                                            ->min('expiry_date');
+                                                    @endphp
+                                                    {{ $earliestExpiry ? \Carbon\Carbon::parse($earliestExpiry)->format('Y-m-d') : 'N/A' }}
+                                                </td>
                                                 <td class="px-4 py-2">{{ $product->safety_stock_level }}</td>
                                                 <td>
                                                     <a href="{{ route('transactions.index', ['product_name' => $product->name]) }}"
@@ -121,7 +129,8 @@
                                                         method="POST">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                                        <button type="submit"
+                                                            class="btn btn-danger btn-sm">Delete</button>
                                                     </form>
                                                 </td>
 
@@ -149,13 +158,13 @@
             </div>
         </div>
     </div>
-    
 
-            <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js" defer></script>
-            <script>
-                $(document).ready(function() {
-                    $('#myTable').DataTable();
 
-                });
-            </script>
-        @endsection
+    <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js" defer></script>
+    <script>
+        $(document).ready(function() {
+            $('#myTable').DataTable();
+
+        });
+    </script>
+@endsection

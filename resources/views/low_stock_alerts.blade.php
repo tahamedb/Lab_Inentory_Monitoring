@@ -39,8 +39,12 @@
                                         @foreach ($StockAlerts as $alert)
                                             <tr>
                                                 @php
-                                                    $entries = $alert->product->transactions->where('type', 'entry')->sum('quantity');
-                                                    $exits = $alert->product->transactions->where('type', 'exit')->sum('quantity');
+                                                    $entries = $alert->product->transactions
+                                                        ->where('type', 'entry')
+                                                        ->sum('quantity');
+                                                    $exits = $alert->product->transactions
+                                                        ->where('type', 'exit')
+                                                        ->sum('quantity');
                                                     $current_stock = $entries - $exits; // Calculate current stock
                                                 @endphp
                                                 <td>{{ $alert->product->name }}</td>
@@ -67,8 +71,8 @@
                 </div>
             </div>
         </div>
-   <br>
-   
+        <br>
+
 
         <div class="card">
             <div class="card-body">
@@ -103,19 +107,29 @@
                                     </thead>
                                     <tbody>
                                         @foreach ($ExpiryAlerts as $alert)
+                                            @php
+                                                $productEntry = $alert->productEntry ?? null;
+                                                
+                                                $product = $productEntry ? $productEntry->product : null;
+                                            @endphp
                                             <tr>
-
-                                                <td>{{ $alert->product->name }}</td>
-                                                <td>{{ $alert->created_at->format('Y-m-d H:i') }} </td>
-                                                <td>{{ $alert->product->expiry_date }}</td>
-
                                                 <td>
-                                                    <a href="{{ route('transactions.index', ['product_name' => $alert->product->name]) }}"
-                                                        class="btn btn-danger">Add Stock</a>
+                                                    {{ $product ? $product->name : 'Product not found' }}
+                                                </td>
+                                                <td>{{ $alert->created_at->format('Y-m-d H:i') }}</td>
+                                                <td>
+                                                    {{ $productEntry ? $productEntry->expiry_date->format('Y-m-d') : 'N/A' }}
+                                                </td>
+                                                <td>
+                                                    @if ($product)
+                                                        <a href="{{ route('transactions.index', ['product_name' => $product->name]) }}"
+                                                            class="btn btn-danger">Add Stock</a>
+                                                    @else
+                                                        <button class="btn btn-secondary" disabled>Add Stock</button>
+                                                    @endif
                                                 </td>
                                             </tr>
                                         @endforeach
-
                                     </tbody>
 
 
@@ -126,5 +140,5 @@
                 </div>
             </div>
         </div>
-    </div>                                 
- @endsection
+    </div>
+@endsection

@@ -7,7 +7,11 @@ use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log; // Import Log facade
+use App\Models\ProductEntry;
 use App\Models\LowStockAlert;
+use Illuminate\Support\Facades\DB;
+use Exception;
 
 class TransactionController extends Controller
 {
@@ -40,92 +44,101 @@ class TransactionController extends Controller
     {
         $user = Auth::user();
 
-        // Assume the field for product name in the form is 'product_name'
-        $productName = $request->input('product_name');
+        Log::info('Entering store method', ['userID' => Auth::id()]);
 
-        // Find the product by name
-        $product = Product::where('name', $productName)->first();
-
-        // Check if product exists
-        if (!$product) {
-            return back()->withErrors(['product_name' => 'The selected product does not exist.'])->withInput();
-        }
-
-        // Validate other request data
         $validatedData = $request->validate([
             'quantity' => 'required|integer|min:1',
             'type' => 'required|in:entry,exit',
-            'remarks' => 'nullable|string'
+            'remarks' => 'nullable|string',
+
         ]);
+
+        $product = Product::where('name', $request['product_name'])->first();
+
+        if (!$product) {
+            Log::error('Product not found', ['product_name' => $request['product_name']]);
+            return back()->withErrors(['product_name' => 'The selected product does not exist.'])->withInput();
+        }
+
+        if ($validatedData['type'] == 'entry') {
+            ProductEntry::create([
+                'product_id' => $product->id,
+                'quantity' => $validatedData['quantity'],
+                'expiry_date' => $request['expiry_date'],
+            ]);
+            Log::info('Entry transaction processed', ['product_id' => $product->id, 'quantity' => $validatedData['quantity']]);
+        } else {
+            $remainingQuantity = $validatedData['quantity'];
+            $productEntries = ProductEntry::where('product_id', $product->id)
+                ->where('quantity', '>', 0)
+                ->orderBy('expiry_date', 'asc')
+                ->get();
+
+            foreach ($productEntries as $entry) {
+                if ($remainingQuantity <= $entry->quantity) {
+                    $entry->decrement('quantity', $remainingQuantity);
+                    Log::info('Exit transaction processed within one entry', ['productEntryId' => $entry->id, 'decrementedQuantity' => $remainingQuantity]);
+                    $remainingQuantity = 0;
+                    break;
+                } else {
+                    $remainingQuantity -= $entry->quantity;
+                    $entry->update(['quantity' => 0]);
+                    Log::info('Exit transaction processed across multiple entries', ['productEntryId' => $entry->id, 'decrementedQuantity' => $entry->quantity]);
+                }
+            }
+
+            if ($remainingQuantity > 0) {
+                Log::error('Insufficient stock for exit transaction', ['product_id' => $product->id, 'remainingQuantity' => $remainingQuantity]);
+                return back()->with([
+                    'message' => 'The quantity for the exit transaction exceeds the available stock.',
+                    'alert-type' => 'error'
+                ]);
+            }
+        }
+
+        // Low stock alert check logic here...
+        Transaction::create(array_merge($validatedData, [
+            'product_id' => $product->id,
+            'user_id' => $user->id,
+            'user_name' => $user->name, // Note: This might not be necessary if you have user_id
+        ]));
+
+        // Recalculate the current stock
         $entries = $product->transactions()->where('type', 'entry')->sum('quantity');
         $exits = $product->transactions()->where('type', 'exit')->sum('quantity');
         $currentStock = $entries - $exits;
-    
-        // Check for 'exit' transaction if it exceeds current stock
-        if ($validatedData['type'] == 'exit' && $validatedData['quantity'] > $currentStock) {
-            return back()->with([
-                'message' => 'The quantity for the exit transaction exceeds the current stock:'. $currentStock,
-                'alert-type' => 'error'
-            ]);
-        }
-        // Add product_id to the validated data
-        $validatedData['product_id'] = $product->id;
-        $validatedData['user_id'] = $user->id;
-        $validatedData['user_name'] = $user->name;
 
-        // If the transaction type is 'entry', validate the expiry date
-        if ($request->input('type') === 'entry') {
-            $validatedData['expiry_date'] = $request->validate([
-                'expiry_date' => 'required|date'
-            ])['expiry_date'];
-
-            // Update the product's expiry date
-            $product->expiry_date = $validatedData['expiry_date'];
+        // Check if product is below safety stock level and send email
+        if ($currentStock < $product->safety_stock_level && !$product->low_stock_email_sent) {
+            $mailController = new MailController();
+            $mailController->send_low_stock_mail($product);
+            $product->low_stock_email_sent = true;
             $product->save();
+            LowStockAlert::create(['product_id' => $product->id]);
         }
+        // this is for when the stock becomes above the safety stock level
+        if ($currentStock > $product->safety_stock_level) {
+            if ($product->low_stock_email_sent) {
+                $product->low_stock_email_sent = false;
+                $product->save();
+            }
 
-        // Create and save the new transaction
-        Transaction::create($validatedData);
-
-        //check if product is below safety stock level and send email
-
- // Recalculate the current stock
-    $entries = $product->transactions()->where('type', 'entry')->sum('quantity');
-    $exits = $product->transactions()->where('type', 'exit')->sum('quantity');
-    $currentStock = $entries - $exits;
-
-    // Check if product is below safety stock level and send email
-    if ($currentStock < $product->safety_stock_level && !$product->low_stock_email_sent) {
-        $mailController = new MailController();
-        $mailController->send_low_stock_mail($product);
-        $product->low_stock_email_sent = true;
-        $product->save();
-        LowStockAlert::create(['product_id' => $product->id]);
-
-    }
-
-    if ($currentStock > $product->safety_stock_level) {
-        if ($product->low_stock_email_sent) {
-            $product->low_stock_email_sent = false;
-            $product->save();
+            // Find any unresolved low stock alert for this product and mark as resolved
+            $unresolvedAlert = LowStockAlert::where('product_id', $product->id)
+                ->where('resolved', false)
+                ->first();
+            if ($unresolvedAlert) {
+                $unresolvedAlert->resolved = true;
+                $unresolvedAlert->save();
+            }
         }
-
-        // Find any unresolved low stock alert for this product and mark as resolved
-        $unresolvedAlert = LowStockAlert::where('product_id', $product->id)
-                                         ->where('resolved', false)
-                                         ->first();
-        if ($unresolvedAlert) {
-            $unresolvedAlert->resolved = true;
-            $unresolvedAlert->save();
-        }
-    }
-
-        // Redirect to the transactions list with a success message
+        Log::info('Transaction completed successfully', ['product_id' => $product->id, 'transaction_type' => $validatedData['type']]);
         return redirect()->route('transactions.index')->with([
-            'message' => 'Transaction successfully added.',
+            'message' => 'Transaction successfully processed.',
             'alert-type' => 'success'
         ]);
     }
+
 
     public function edit(Transaction $transaction)
     {

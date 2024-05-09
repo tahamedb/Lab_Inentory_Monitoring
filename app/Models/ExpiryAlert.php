@@ -7,10 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class ExpiryAlert extends Model
 {
-    protected $fillable = ['product_id', 'expiry_date', 'notified'];
+    protected $fillable = ['product_entry_id', 'expiry_date', 'notified'];
 
-    public function product()
+    public function productEntry()
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(ProductEntry::class);
     }
 }

@@ -14,6 +14,7 @@ return [
     */
 
     'default' => env('MAIL_MAILER', 'smtp'),
+    'low_stock_email' => env('LOW_STOCK_EMAIL'),
 
     /*
     |--------------------------------------------------------------------------
